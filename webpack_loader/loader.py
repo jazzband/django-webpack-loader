@@ -30,6 +30,63 @@ class WebpackLoader(object):
                 'the file and the path is correct?'.format(
                     self.config['STATS_FILE']))
 
+    def _get_bundle(self, bucket, bundle_name):
+        """Collects the bundle withing each bucket based on its bundle name.
+
+        Arguments:
+            bucket:
+                The key on which you are extracting data from ('chunks', 'exported_assets')
+            bundle_name:
+                The name of the specific asset in the given bucket
+
+        Returns:
+            A data dictionary containing all the data for the given chunk/ asset.
+        """
+        assets = self.get_assets()
+
+        # poll when debugging and block request until bundle is compiled
+        # or the build times out
+        if settings.DEBUG:
+            timeout = self.config['TIMEOUT'] or 0
+            timed_out = False
+            start = time.time()
+            while assets['status'] == 'compiling' and not timed_out:
+                time.sleep(self.config['POLL_INTERVAL'])
+                if timeout and (time.time() - timeout > start):
+                    timed_out = True
+                assets = self.get_assets()
+
+            if timed_out:
+                raise WebpackLoaderTimeoutError(
+                    "Timed Out. Bundle `{0}` took more than {1} seconds "
+                    "to compile.".format(bundle_name, timeout)
+                )
+
+        if assets.get('status') == 'done':
+            chunks = assets[bucket].get(bundle_name)
+            if chunks is None:
+                raise WebpackBundleLookupError('Cannot resolve bundle {0}.'.format(bundle_name))
+            if bucket == self.config['ASSETS_IDENTIFIER']:
+                return chunks
+            else:
+                return self.filter_chunks(chunks)
+
+        elif assets.get('status') == 'error':
+            if 'file' not in assets:
+                assets['file'] = ''
+            if 'error' not in assets:
+                assets['error'] = 'Unknown Error'
+            error = u"""
+            {error} in {file}
+            {message}
+            """.format(**assets)
+            raise WebpackError(error)
+
+        raise WebpackLoaderBadStatsError(
+            "The stats file does not contain valid data. Make sure "
+            "webpack-bundle-tracker plugin is enabled and try to run "
+            "webpack again.")
+
     def get_assets(self):
         if self.config['CACHE']:
             if self.name not in self._assets:
@@ -56,44 +113,7 @@ class WebpackLoader(object):
         return staticfiles_storage.url(relpath)
 
     def get_bundle(self, bundle_name):
-        assets = self.get_assets()
+        return self._get_bundle('chunks', bundle_name)
 
-        # poll when debugging and block request until bundle is compiled
-        # or the build times out
-        if settings.DEBUG:
-            timeout = self.config['TIMEOUT'] or 0
-            timed_out = False
-            start = time.time()
-            while assets['status'] == 'compiling' and not timed_out:
-                time.sleep(self.config['POLL_INTERVAL'])
-                if timeout and (time.time() - timeout > start):
-                    timed_out = True
-                assets = self.get_assets()
-
-            if timed_out:
-                raise WebpackLoaderTimeoutError(
-                    "Timed Out. Bundle `{0}` took more than {1} seconds "
-                    "to compile.".format(bundle_name, timeout)
-                )
-
-        if assets.get('status') == 'done':
-            chunks = assets['chunks'].get(bundle_name, None)
-            if chunks is None:
-                raise WebpackBundleLookupError('Cannot resolve bundle {0}.'.format(bundle_name))
-            return self.filter_chunks(chunks)
-
-        elif assets.get('status') == 'error':
-            if 'file' not in assets:
-                assets['file'] = ''
-            if 'error' not in assets:
-                assets['error'] = 'Unknown Error'
-            error = u"""
-            {error} in {file}
-            {message}
-            """.format(**assets)
-            raise WebpackError(error)
-
-        raise WebpackLoaderBadStatsError(
-            "The stats file does not contain valid data. Make sure "
-            "webpack-bundle-tracker plugin is enabled and try to run "
-            "webpack again.")
+    def get_exported_asset(self, bundle_name):
+        return self._get_bundle(self.config['ASSETS_IDENTIFIER'], bundle_name)
