@@ -50,7 +50,6 @@ class WebpackLoader(object):
         public_path = chunk.get('publicPath')
         if public_path:
             return public_path
-
         relpath = '{0}{1}'.format(
             self.config['BUNDLE_DIR_NAME'], chunk['name']
         )
@@ -80,7 +79,8 @@ class WebpackLoader(object):
         if assets.get('status') == 'done':
             chunks = assets['chunks'].get(bundle_name, None)
             if chunks is None:
-                raise WebpackBundleLookupError('Cannot resolve bundle {0}.'.format(bundle_name))
+                raise WebpackBundleLookupError(
+                    'Cannot resolve bundle {0}.'.format(bundle_name))
             return self.filter_chunks(chunks)
 
         elif assets.get('status') == 'error':

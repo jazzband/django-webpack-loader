@@ -1,4 +1,6 @@
-# django-webpack-loader
+# django-webpack-loader for gzip
+
+Different from the original repository, it appends an extension in the creation of the tags (as .gzip). The append is also dynamic, and can be done for css or js
 
 [![Join the chat at https://gitter.im/owais/django-webpack-loader](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/owais/django-webpack-loader?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/owais/django-webpack-loader.svg?branch=master)](https://travis-ci.org/owais/django-webpack-loader)
@@ -251,6 +253,7 @@ WEBPACK_LOADER = {
 
     <!-- add some extra attributes to the tag -->
     {% render_bundle 'main' 'js' 'DEFAULT' attrs='async chatset="UTF-8"'%}
+    {% render_bundle 'main' 'js' 'DEFAULT' attrs='async chatset="UTF-8"' suffix=".gz" %}
   </body>
 </head>
 ```
