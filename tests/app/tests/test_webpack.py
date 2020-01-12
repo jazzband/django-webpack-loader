@@ -16,8 +16,13 @@ from webpack_loader.exceptions import (
     WebpackLoaderTimeoutError,
     WebpackBundleLookupError
 )
+from webpack_loader.loader import WebpackLoader
 from webpack_loader.utils import get_loader
 
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 BUNDLE_PATH = os.path.join(settings.BASE_DIR, 'assets/bundles/')
 DEFAULT_CONFIG = 'DEFAULT'
@@ -246,3 +251,95 @@ class LoaderTestCase(TestCase):
             result.rendered_content
             elapsed = time.time() - then
             self.assertTrue(elapsed < wait_for)
+
+    def test_no_shared_state_between_loader_instances(self):
+        self.compile_bundles('webpack.config.simple.js')
+
+        loader = WebpackLoader()
+        loader.config['CACHE'] = True
+
+        try:
+            assets = loader.get_assets()
+
+            self.assertIn('chunks', assets)
+
+            # A new instance of the WebpackLoader should now start with an empty
+            # cache
+            with mock.patch(
+                    'webpack_loader.loader.open', mock.mock_open(read_data='{}')):
+                loader = WebpackLoader()
+                loader.config['CACHE'] = True
+                assets = loader.get_assets()
+                self.assertNotIn('chunks', assets)
+        finally:
+            loader.config['CACHE'] = False
+
+    def test_caching_disabled(self):
+        self.compile_bundles('webpack.config.simple.js')
+
+        # Don't use get_loader to prevent sharing state with other tests
+        loader = WebpackLoader()
+        assets = loader.get_assets()
+
+        self.assertIn('chunks', assets)
+
+        # Caching is disabled so another call to get_assets should trigger
+        # a reload of the bundle, mock open to change the contents
+        with mock.patch(
+                'webpack_loader.loader.open', mock.mock_open(read_data='{}')):
+            assets = loader.get_assets()
+            self.assertEqual(assets, {})
+
+    def test_caching_enabled(self):
+        self.compile_bundles('webpack.config.simple.js')
+
+        # Don't use get_loader to prevent sharing state with other tests
+        loader = WebpackLoader()
+        loader.config['CACHE'] = True
+        try:
+            assets = loader.get_assets()
+
+            self.assertIn('chunks', assets)
+
+            # Caching is enabled so another call to get_assets should not trigger
+            # a reload of the bundle
+            with mock.patch(
+                    'webpack_loader.loader.open', mock.mock_open(read_data='{}')):
+                assets = loader.get_assets()
+                self.assertIn('chunks', assets)
+        finally:
+            loader.config['CACHE'] = False
+
+    def test_caching_enabled_with_auto_reload(self):
+        self.compile_bundles('webpack.config.simple.js')
+
+        # Don't use get_loader to prevent sharing state with other tests
+        loader = WebpackLoader()
+        loader.config['CACHE'] = True
+        loader.config['AUTO_RELOAD'] = True
+
+        try:
+            assets = loader.get_assets()
+
+            self.assertIn('chunks', assets)
+
+            # If file has same mtime, hit cache
+            with mock.patch(
+                    'webpack_loader.loader.open', mock.mock_open(read_data='{}')):
+                assets = loader.get_assets()
+                self.assertIn('chunks', assets)
+
+            assets = loader.get_assets()
+
+            self.assertIn('chunks', assets)
+
+            # When mtime changes, auto reload
+            os.utime(loader.config['STATS_FILE'], None)
+
+            with mock.patch(
+                    'webpack_loader.loader.open', mock.mock_open(read_data='{}')):
+                assets = loader.get_assets()
+                self.assertEqual(assets, {})
+        finally:
+            loader.config['CACHE'] = False
+            loader.config['AUTO_RELOAD'] = False
