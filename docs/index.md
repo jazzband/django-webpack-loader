@@ -1,7 +1,3 @@
-# Looking for maintainers
-
-This repository is unmaintained as I don't have any free time to dedicate to this effort. If you or your organisation are heavy users of this library along with it's JS cousin (webpack-bundle-tracker), I'd be happy to add you as maintainers or even transfer the repo to you. Feel free to email me and we'll take it on from there. Thanks.
-
 # django-webpack-loader
 
 [![Join the chat at https://gitter.im/jazzband/django-webpack-loader](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/owais/django-webpack-loader?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -167,7 +163,7 @@ and your webpack config is located at `/home/src/webpack.config.js`, then the va
 
 #### POLL_INTERVAL
 
-`POLL_INTERVAL` is the number of seconds webpack_loader should wait between polling the stats file. The stats file is polled every 100 milliseconds by default and any requests to are blocked while webpack compiles the bundles. You can reduce this if your bundles take shorter to compile.
+`POLL_INTERVAL` is the number of seconds webpack_loader should wait between polling the stats file. The stats file is polled every 100 miliseconds by default and any requests to are blocked while webpack compiles the bundles. You can reduce this if your bundles take shorter to compile.
 
 **NOTE:** Stats file is not polled when in production (DEBUG=False).
 
@@ -428,9 +424,4 @@ Enjoy your webpack with django :)
 
 _Below are known projects that attempt to solve the same problem:_
 
-Note that these projects have not been vetted or reviewed in any way by me.
-These are not recommendation.
-Anyone can add their project to this by sending a PR.
-
 * [Django Manifest Loader](https://github.com/shonin/django-manifest-loader)
-* [Python Webpack Boilerplate](https://github.com/AccordBox/python-webpack-boilerplate)
