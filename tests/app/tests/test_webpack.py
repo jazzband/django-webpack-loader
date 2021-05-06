@@ -87,6 +87,18 @@ class LoaderTestCase(TestCase):
         self.assertEqual(assets['status'], 'done')
         self.assertEqual(assets['publicPath'], 'http://custom-static-host.com/')
 
+    def test_querystring(self):
+        self.compile_bundles('webpack.config.queryString.js')
+        loader = get_loader(DEFAULT_CONFIG)
+        assets = loader.get_assets()
+        self.assertEqual(assets['status'], 'done')
+
+        main = list(loader.get_bundle('main'))
+        self.assertEqual(len(main), 2)
+        name, hash = main[0]['publicPath'].split('?', 1)
+        self.assertEqual(name, 'http://custom-static-host.com/name.js')
+        self.assertEqual(len(hash), 20)
+
     def test_code_spliting(self):
         self.compile_bundles('webpack.config.split.js')
         assets = get_loader(DEFAULT_CONFIG).get_assets()
